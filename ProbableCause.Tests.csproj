@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><AssemblyName>ProbableCause.Tests</AssemblyName><OutputType>Exe</OutputType></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="ProbableCause.csproj" />
+    <Compile Include="tests\**\*.cs" />
+  </ItemGroup>
+</Project>
