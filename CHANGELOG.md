@@ -1,5 +1,11 @@
 # Changelog
 
+## Version 1.0.1
+
+- Added a separate build for BepInEx 6.0.0-be.755 Unity Mono.
+- Retained the BepInEx 5.4.23.5 build, plugin identity, and police behavior.
+- Both builds passed offline member and Harmony patch checks. The BepInEx 6 build has not been tested in-game.
+
 ## Version 1.0.0
 
 Initial release.

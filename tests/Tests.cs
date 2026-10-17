@@ -14,13 +14,44 @@ internal static class Tests
 
     internal static int Run()
     {
+        Console.WriteLine("BepInEx: " + typeof(BepInEx.BepInPlugin).Assembly.FullName);
         Console.WriteLine("Harmony: " + typeof(Harmony).Assembly.FullName);
         Console.WriteLine("Game: " + typeof(Crime).Assembly.Location);
+        LoaderTests();
         ResolutionTests();
         PatchedBehaviorTests();
         Console.WriteLine($"PASS: {passed} checks. Real game methods patched and run on desktop .NET Framework with synthetic objects. " +
             "Crime.CheckCrimesForArrest is resolved but not patched or run offline. No Unity native runtime or gameplay executed.");
         return 0;
+    }
+
+    private static void LoaderTests()
+    {
+        Check("selected loader references, Harmony, plugin base and version", () =>
+        {
+            var pluginAssembly = typeof(Plugin).Assembly;
+            var references = pluginAssembly.GetReferencedAssemblies();
+            var loaderReferences = references.Where(reference => reference.Name.StartsWith("BepInEx", StringComparison.OrdinalIgnoreCase)).ToArray();
+            var harmony = references.Single(reference => reference.Name == "0Harmony");
+#if BEPINEX6
+            True(loaderReferences.Length == 2);
+            True(loaderReferences.Any(reference => reference.Name == "BepInEx.Core" && reference.Version == new Version(6, 0, 0, 0)));
+            True(loaderReferences.Any(reference => reference.Name == "BepInEx.Unity.Mono" && reference.Version == new Version(6, 0, 0, 0)));
+            True(!loaderReferences.Any(reference => reference.Name == "BepInEx"));
+            True(harmony.Version == new Version(2, 10, 2, 0));
+            True(typeof(Plugin).BaseType == typeof(BepInEx.Unity.Mono.BaseUnityPlugin));
+#else
+            True(loaderReferences.Length == 1);
+            var loader = loaderReferences.Single();
+            True(loader.Name == "BepInEx" && loader.Version == new Version(5, 4, 23, 5));
+            True(!loaderReferences.Any(reference => reference.Name == "BepInEx.Core" || reference.Name == "BepInEx.Unity.Mono"));
+            True(harmony.Version == new Version(2, 9, 0, 0));
+            True(typeof(Plugin).BaseType == typeof(BepInEx.BaseUnityPlugin));
+#endif
+            True(Plugin.Guid == "com.skeptic043.obenseuer.probablecause");
+            True(Plugin.Version == "1.0.1");
+            True(pluginAssembly.GetName().Version == new Version(1, 0, 1, 0));
+        });
     }
 
     private static void ResolutionTests()

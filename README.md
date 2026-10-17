@@ -6,8 +6,8 @@ Police need a reason. Cops no longer sense stolen goods in your pockets. They co
 
 ### Manual installation
 
-1. Install [BepInEx 5.4.23.5](https://github.com/BepInEx/BepInEx/releases/tag/v5.4.23.5) (`BepInEx_win_x64_5.4.23.5.zip`) in your Obenseuer game folder, following its installation instructions. Obenseuer mods use both BepInEx 5 and 6, so download BepInEx 5 for this mod. It has not been tested with BepInEx 6.
-2. Download and extract the Probable Cause ZIP. Copy its `BepInEx/plugins/ProbableCause` folder into `BepInEx/plugins` in your Obenseuer folder.
+1. Install either [BepInEx 5.4.23.5](https://github.com/BepInEx/BepInEx/releases/tag/v5.4.23.5) (`BepInEx_win_x64_5.4.23.5.zip`) or [BepInEx 6.0.0-be.755 Unity Mono](https://builds.bepinex.dev/projects/bepinex_be/755/BepInEx-Unity.Mono-win-x64-6.0.0-be.755%2B3fab71a.zip) in your Obenseuer game folder.
+2. Download the Probable Cause ZIP that matches your installed BepInEx version, then extract it into the Obenseuer game folder. The DLL should end up at `BepInEx/plugins/ProbableCause/ProbableCause.dll`.
 3. Launch Obenseuer normally.
 
 ## How it works
@@ -24,7 +24,9 @@ None.
 
 ## Compatibility
 
-No known incompatibilities. Probable Cause supports BepInEx 5.4.23.5 on Windows x64 and has not been tested with BepInEx 6. If a game update changes the police code this mod relies on, the mod switches itself off and police use the base game's rules.
+Probable Cause has separate Windows x64 builds for BepInEx 5.4.23.5 and BepInEx 6.0.0-be.755 Unity Mono. Both builds passed offline member, Harmony installation, cleanup, and package checks against Obenseuer 0.5.08. The BepInEx 6 build has not been tested in-game.
+
+No specific incompatibilities are known. If a game update changes the police code this mod relies on, the mod switches itself off and police use the base game's rules.
 
 ## AI Use
 
@@ -32,6 +34,6 @@ AI was used to write all of the code in this project. The original design direct
 
 ## Issues and links
 
-[Report an issue](https://github.com/Skeptic043/Obenseuer-Probable-Cause/issues) with `BepInEx/LogOutput.log`. Check the log for local paths or other personal information before uploading it.
+Report issues through the Bugs tab on Nexus Mods and include `BepInEx/LogOutput.log`. Check the log for local paths or other personal information before uploading it.
 
-[Source code](https://github.com/Skeptic043/Obenseuer-Probable-Cause) · [Changelog](https://github.com/Skeptic043/Obenseuer-Probable-Cause/blob/main/CHANGELOG.md) · [Build instructions](https://github.com/Skeptic043/Obenseuer-Probable-Cause/blob/main/BUILDING.md) · [MIT License](https://github.com/Skeptic043/Obenseuer-Probable-Cause/blob/main/LICENSE) · [Support on Ko-fi](https://ko-fi.com/skeptic043) · skeptic043
+Probable Cause is released under the MIT License. [Support on Ko-fi](https://ko-fi.com/skeptic043) · skeptic043
