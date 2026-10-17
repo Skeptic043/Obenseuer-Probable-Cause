@@ -7,9 +7,8 @@ Police need a reason. Cops no longer sense stolen goods in your pockets. They co
 ### Manual installation
 
 1. Install [BepInEx 5.4.23.5](https://github.com/BepInEx/BepInEx/releases/tag/v5.4.23.5) (`BepInEx_win_x64_5.4.23.5.zip`) in your Obenseuer game folder, following its installation instructions. Obenseuer mods use both BepInEx 5 and 6, so download BepInEx 5 for this mod. It has not been tested with BepInEx 6.
-2. Download the Probable Cause release ZIP from Nexus Mods or the [latest GitHub release](https://github.com/Skeptic043/Obenseuer-Probable-Cause/releases/latest).
-3. Extract the ZIP and copy its `BepInEx/plugins/ProbableCause` folder into `BepInEx/plugins` in your Obenseuer folder.
-4. Launch Obenseuer normally.
+2. Download and extract the Probable Cause ZIP. Copy its `BepInEx/plugins/ProbableCause` folder into `BepInEx/plugins` in your Obenseuer folder.
+3. Launch Obenseuer normally.
 
 ## How it works
 
@@ -23,19 +22,13 @@ Witnesses still report crimes they see, and scripted checks in specific places w
 
 None.
 
-## Adding or removing the mod
-
-Probable Cause can be added to an existing save. It stores no settings or save data. To remove it, delete `BepInEx/plugins/ProbableCause`. Police will use the base game's rules the next time you launch the game.
-
 ## Compatibility
 
-Probable Cause supports BepInEx 5.4.23.5 on Windows x64. It has not been tested with BepInEx 6.
-
-No known incompatibilities. If a game update changes the police code this mod relies on, the mod switches itself off and police use the base game's rules.
+No known incompatibilities. Probable Cause supports BepInEx 5.4.23.5 on Windows x64 and has not been tested with BepInEx 6. If a game update changes the police code this mod relies on, the mod switches itself off and police use the base game's rules.
 
 ## AI Use
 
-AI was used to write all of the code in this project. The original concept, design direction, testing, debugging, and release decisions are my own. If you prefer not to use mods developed with AI assistance, I understand and respect that choice.
+AI was used to write all of the code in this project. The original design direction, testing, debugging, and release decisions are my own. If you prefer not to use mods developed with AI assistance, I understand and respect that choice.
 
 ## Issues and links
 
