@@ -2,8 +2,8 @@
 
 Requirements: Windows, Windows PowerShell 5.1 or PowerShell 7, a .NET SDK supporting the .NET Framework 4.7.2 target, `dotnet msbuild -getProperty`, an owned Obenseuer installation, and the extracted Windows x64 releases for both supported loaders:
 
-- [BepInEx 5.4.23.5](https://github.com/BepInEx/BepInEx/releases/tag/v5.4.23.5)
-- [BepInEx 6.0.0-be.755 Unity Mono](https://builds.bepinex.dev/projects/bepinex_be/755/BepInEx-Unity.Mono-win-x64-6.0.0-be.755%2B3fab71a.zip)
+- [BepInEx 5](https://github.com/BepInEx/BepInEx/releases/latest), using the 5.4.23.5 Windows x64 release
+- [BepInEx 6 Unity Mono](https://builds.bepinex.dev/projects/bepinex_be), using the 6.0.0-be.755 Windows x64 build
 
 The game references can come from any Obenseuer version. The default loader reference directories are `.local/dependencies/BepInEx5/BepInEx/core` and `.local/dependencies/BepInEx6-755/BepInEx/core`. Each loader assembly is checked against its pinned release hash, and the build rejects missing or different references. `LoaderTarget` accepts `BepInEx5` or `BepInEx6` and defaults to `BepInEx5`.
 
