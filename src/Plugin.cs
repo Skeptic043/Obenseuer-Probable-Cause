@@ -14,7 +14,7 @@ namespace ProbableCause
     {
         public const string Guid = "com.skeptic043.obenseuer.probablecause";
         public const string Name = "Probable Cause";
-        public const string Version = "1.0.1";
+        public const string Version = "1.0.2";
         private Harmony harmony;
         private GameMembers game;
         private bool quitting;

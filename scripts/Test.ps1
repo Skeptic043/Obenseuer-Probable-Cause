@@ -2,7 +2,8 @@ param(
     [string]$GamePath = '',
     [string]$BepInExCorePath = '',
     [ValidateSet('BepInEx5','BepInEx6')]
-    [string]$LoaderTarget = 'BepInEx5'
+    [string]$LoaderTarget = 'BepInEx5',
+    [string]$PluginPath = ''
 )
 $ErrorActionPreference = 'Stop'
 $env:MSBuildEnableWorkloadResolver = 'false'
@@ -19,5 +20,7 @@ if ($LASTEXITCODE -ne 0) { throw "Test build failed with exit code $LASTEXITCODE
 $resolved = (& dotnet msbuild $project -getProperty:GamePath -getProperty:BepInExCorePath @properties -nologo) -join "`n"
 if ($LASTEXITCODE -ne 0) { throw "Could not resolve GamePath and BepInExCorePath (exit code $LASTEXITCODE)." }
 $paths = ($resolved | ConvertFrom-Json).Properties
-& (Join-Path $projectRoot ".local\bin\$LoaderTarget\ProbableCause.Tests\Release\ProbableCause.Tests.exe") $paths.GamePath ([IO.Path]::GetFullPath($paths.BepInExCorePath))
+$testArguments = @($paths.GamePath, [IO.Path]::GetFullPath($paths.BepInExCorePath))
+if ($PluginPath) { $testArguments += [IO.Path]::GetFullPath($PluginPath) }
+& (Join-Path $projectRoot ".local\bin\$LoaderTarget\ProbableCause.Tests\Release\ProbableCause.Tests.exe") @testArguments
 if ($LASTEXITCODE -ne 0) { throw "Tests failed with exit code $LASTEXITCODE." }

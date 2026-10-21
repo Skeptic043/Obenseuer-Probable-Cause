@@ -83,30 +83,35 @@ $assemblyVersion = [Reflection.AssemblyName]::GetAssemblyName($bep5Dll).Version
 $version = '{0}.{1}.{2}' -f $assemblyVersion.Major,$assemblyVersion.Minor,$assemblyVersion.Build
 if ([Reflection.AssemblyName]::GetAssemblyName($bep6Dll).Version -ne $assemblyVersion) { throw 'BepInEx 5 and BepInEx 6 builds have different assembly versions.' }
 
+Add-Type -Path (Join-Path $bep5CorePath 'Mono.Cecil.dll')
+function Get-AssemblyReferenceNames([string]$path) {
+    $assembly = [Mono.Cecil.AssemblyDefinition]::ReadAssembly($path)
+    try { return ,[string[]]@($assembly.MainModule.AssemblyReferences | ForEach-Object { $_.Name }) }
+    finally { $assembly.Dispose() }
+}
+$bep5References = Get-AssemblyReferenceNames $bep5Dll
+$bep6References = Get-AssemblyReferenceNames $bep6Dll
+if ($bep5References -notcontains 'BepInEx' -or $bep5References -contains 'BepInEx.Core' -or $bep5References -contains 'BepInEx.Unity.Mono') {
+    throw 'The BepInEx 5 candidate has the wrong loader references.'
+}
+if ($bep6References -contains 'BepInEx' -or $bep6References -notcontains 'BepInEx.Core' -or $bep6References -notcontains 'BepInEx.Unity.Mono') {
+    throw 'The BepInEx 6 candidate has the wrong loader references.'
+}
+
 $checkRoot = Join-Path $projectRoot ('.local\package-checks\' + [Guid]::NewGuid().ToString('N'))
 $sourceStage = Join-Path $checkRoot 'source-staged'
 $dist = Join-Path $projectRoot 'dist'
 New-Item -ItemType Directory -Path $checkRoot,$sourceStage,$dist -Force | Out-Null
-$bep5Zip = Join-Path $dist "ProbableCause-$version-BepInEx5.zip"
-$bep6Zip = Join-Path $dist "ProbableCause-$version-BepInEx6.zip"
-$expectedDist = @($bep5Zip,$bep6Zip) | ForEach-Object { [IO.Path]::GetFullPath($_) }
-$unexpectedDist = @(Get-ChildItem -LiteralPath $dist -Force | Where-Object { $expectedDist -notcontains [IO.Path]::GetFullPath($_.FullName) })
-if ($unexpectedDist.Count -ne 0) {
-    throw 'dist contains unexpected entries. Remove or relocate them after reviewing their exact paths: ' + (($unexpectedDist | ForEach-Object { $_.FullName }) -join ', ')
-}
+$stagedZip = Join-Path $checkRoot "ProbableCause-$version.zip"
+$universalZip = Join-Path $dist "ProbableCause-$version.zip"
 
 # Explicit allowlists. Ignore rules alone are not a package policy.
-$bep5Entries = @{
-    'BepInEx/plugins/ProbableCause/ProbableCause.dll' = $bep5Dll
-    'README.md' = Join-Path $projectRoot 'README.md'
-    'CHANGELOG.md' = Join-Path $projectRoot 'CHANGELOG.md'
-    'LICENSE' = Join-Path $projectRoot 'LICENSE'
-}
-$bep6Entries = @{
+$universalEntries = @{
     'BepInEx/plugins/ProbableCause/ProbableCause.dll' = $bep6Dll
-    'README.md' = Join-Path $projectRoot 'README.md'
-    'CHANGELOG.md' = Join-Path $projectRoot 'CHANGELOG.md'
-    'LICENSE' = Join-Path $projectRoot 'LICENSE'
+    'BepInEx/plugins/ProbableCause/ProbableCause.BepInEx5.dll' = $bep5Dll
+    'BepInEx/plugins/ProbableCause/README.md' = Join-Path $projectRoot 'README.md'
+    'BepInEx/plugins/ProbableCause/CHANGELOG.md' = Join-Path $projectRoot 'CHANGELOG.md'
+    'BepInEx/plugins/ProbableCause/LICENSE' = Join-Path $projectRoot 'LICENSE'
 }
 $sourceFiles = @('.gitignore','.gitattributes','README.md','BUILDING.md','CHANGELOG.md','LICENSE',
     'Directory.Build.props','ProbableCause.csproj','ProbableCause.Tests.csproj','nuget.config',
@@ -122,32 +127,29 @@ foreach ($relative in $sourceFiles) {
     Copy-Item -LiteralPath $source -Destination $destination
 }
 
-Write-Zip $bep5Zip $bep5Entries
-Write-Zip $bep6Zip $bep6Entries
+Write-Zip $stagedZip $universalEntries
 
-$expectedBep5Files = Get-SortedNames @($bep5Entries.Keys)
-$expectedBep6Files = Get-SortedNames @($bep6Entries.Keys)
-foreach ($check in @(@($bep5Zip,$expectedBep5Files), @($bep6Zip,$expectedBep6Files))) {
-    $names = Get-ZipEntryNames $check[0]
-    if (@($names | Where-Object { $_.Contains('\') }).Count -ne 0) { throw "$($check[0]) has backslash entry names." }
-    if (($names -join "`n") -cne ($check[1] -join "`n")) { throw "$($check[0]) entries differ from the explicit allowlist or order." }
-}
+$expectedFiles = Get-SortedNames @($universalEntries.Keys)
+$names = Get-ZipEntryNames $stagedZip
+if (@($names | Where-Object { $_.Contains('\') }).Count -ne 0) { throw "$stagedZip has backslash entry names." }
+if (($names -join "`n") -cne ($expectedFiles -join "`n")) { throw "$stagedZip entries differ from the explicit allowlist or order." }
+if ($names.Count -ne 5) { throw "$stagedZip must contain exactly five files." }
 
-$bep5Extract = Join-Path $checkRoot 'bepinex5-extracted'
-$bep6Extract = Join-Path $checkRoot 'bepinex6-extracted'
-[IO.Compression.ZipFile]::ExtractToDirectory($bep5Zip, $bep5Extract)
-[IO.Compression.ZipFile]::ExtractToDirectory($bep6Zip, $bep6Extract)
-foreach ($check in @(@($bep5Extract,$expectedBep5Files), @($bep6Extract,$expectedBep6Files))) {
-    $actualPluginFiles = Get-SortedNames @(Get-ChildItem -LiteralPath $check[0] -Recurse -File -Force | ForEach-Object { Get-RelativePath $check[0] $_.FullName })
-    if (($actualPluginFiles -join "`n") -cne ($check[1] -join "`n")) { throw "$($check[0]) differs from its explicit file allowlist." }
-    $packagedDlls = @(Get-ChildItem -LiteralPath $check[0] -Recurse -File -Filter '*.dll')
-    if ($packagedDlls.Count -ne 1 -or $packagedDlls[0].Name -ne 'ProbableCause.dll') { throw "$($check[0]) must contain exactly the ProbableCause DLL." }
-}
-foreach ($check in @(@($bep5Dll,$bep5Extract), @($bep6Dll,$bep6Extract))) {
-    $extractedDll = Join-Path $check[1] 'BepInEx\plugins\ProbableCause\ProbableCause.dll'
+$universalExtract = Join-Path $checkRoot 'universal-extracted'
+[IO.Compression.ZipFile]::ExtractToDirectory($stagedZip, $universalExtract)
+$actualPluginFiles = Get-SortedNames @(Get-ChildItem -LiteralPath $universalExtract -Recurse -File -Force | ForEach-Object { Get-RelativePath $universalExtract $_.FullName })
+if (($actualPluginFiles -join "`n") -cne ($expectedFiles -join "`n")) { throw "$universalExtract differs from its explicit five-file allowlist." }
+$packagedDlls = @(Get-ChildItem -LiteralPath $universalExtract -Recurse -File -Filter '*.dll')
+if ($packagedDlls.Count -ne 2) { throw "$universalExtract must contain exactly two Probable Cause DLLs." }
+$pluginFolder = Join-Path $universalExtract 'BepInEx\plugins\ProbableCause'
+foreach ($check in @(@($bep5Dll,'ProbableCause.BepInEx5.dll'), @($bep6Dll,'ProbableCause.dll'))) {
+    $extractedDll = Join-Path $pluginFolder $check[1]
     if ((Get-FileHash -LiteralPath $check[0]).Hash -ne (Get-FileHash -LiteralPath $extractedDll).Hash) {
-        throw "$($check[1]) plugin differs from its verified build."
+        throw "$extractedDll differs from its verified build."
     }
+}
+foreach ($target in @(@('BepInEx5',$bep5CorePath), @('BepInEx6',$bep6CorePath))) {
+    & (Join-Path $PSScriptRoot 'Test.ps1') -GamePath $gamePath -BepInExCorePath $target[1] -LoaderTarget $target[0] -PluginPath $pluginFolder
 }
 
 # Scan extracted release files for checkout/reference roots and the account name.
@@ -155,7 +157,7 @@ $markers = @(@($projectRoot,$gamePath,$bep5CorePath,$bep6CorePath) | ForEach-Obj
     Where-Object { $_ -and $_.Length -ge 3 } | Sort-Object -Unique
 $markers = @($markers) + @($markers | ForEach-Object { $_.Replace('\','/') }) | Sort-Object -Unique
 $latin1 = [Text.Encoding]::GetEncoding(28591)
-foreach ($file in @(Get-ChildItem -LiteralPath $bep5Extract,$bep6Extract -Recurse -File -Force)) {
+foreach ($file in @(Get-ChildItem -LiteralPath $universalExtract -Recurse -File -Force)) {
     $bytes = [IO.File]::ReadAllBytes($file.FullName)
     foreach ($text in @($latin1.GetString($bytes), [Text.Encoding]::Unicode.GetString($bytes))) {
         foreach ($marker in $markers) {
@@ -167,7 +169,7 @@ foreach ($file in @(Get-ChildItem -LiteralPath $bep5Extract,$bep6Extract -Recurs
 # The internal allowlisted source stage is never distributed. It must reproduce both tested candidates.
 foreach ($target in @(@('BepInEx5',$bep5CorePath,$bep5Dll), @('BepInEx6',$bep6CorePath,$bep6Dll))) {
     & (Join-Path $sourceStage 'scripts\Build.ps1') -GamePath $gamePath -BepInExCorePath $target[1] -LoaderTarget $target[0]
-    & (Join-Path $sourceStage 'scripts\Test.ps1') -GamePath $gamePath -BepInExCorePath $target[1] -LoaderTarget $target[0]
+    & (Join-Path $sourceStage 'scripts\Test.ps1') -GamePath $gamePath -BepInExCorePath $target[1] -LoaderTarget $target[0] -PluginPath $pluginFolder
     $rebuiltDll = Join-Path $sourceStage ".local\bin\$($target[0])\ProbableCause\Release\ProbableCause.dll"
     if ((Get-FileHash -LiteralPath $target[2]).Hash -ne (Get-FileHash -LiteralPath $rebuiltDll).Hash) {
         throw "Fresh source rebuild for $($target[0]) differs from the candidate DLL."
@@ -175,34 +177,38 @@ foreach ($target in @(@('BepInEx5',$bep5CorePath,$bep5Dll), @('BepInEx6',$bep6Co
 }
 $null = Get-RelativePath $checkRoot $sourceStage
 Remove-Item -LiteralPath $sourceStage -Recurse -Force
-$actualDist = @(Get-ChildItem -LiteralPath $dist -Force | ForEach-Object { [IO.Path]::GetFullPath($_.FullName) })
-if ($actualDist.Count -ne 2 -or @($actualDist | Where-Object { $expectedDist -notcontains $_ }).Count -ne 0) {
-    throw 'dist must contain exactly the two validated loader packages.'
+$unexpectedVersionPackages = @(Get-ChildItem -LiteralPath $dist -File -Filter "ProbableCause-$version*.zip" | Where-Object {
+    [IO.Path]::GetFullPath($_.FullName) -ne [IO.Path]::GetFullPath($universalZip)
+})
+if ($unexpectedVersionPackages.Count -ne 0) {
+    throw "dist contains another Probable Cause $version player package: $($unexpectedVersionPackages.FullName -join ', ')"
 }
+Copy-Item -LiteralPath $stagedZip -Destination $universalZip -Force
 
 $record = [ordered]@{
     checkedAt = [DateTime]::UtcNow.ToString('o')
-    bepInEx5Zip = $bep5Zip
-    bepInEx6Zip = $bep6Zip
-    bepInEx5ZipSha256 = (Get-FileHash -LiteralPath $bep5Zip).Hash
-    bepInEx6ZipSha256 = (Get-FileHash -LiteralPath $bep6Zip).Hash
+    universalZip = $universalZip
+    universalZipSha256 = (Get-FileHash -LiteralPath $universalZip).Hash
     bepInEx5DllSha256 = (Get-FileHash -LiteralPath $bep5Dll).Hash
     bepInEx6DllSha256 = (Get-FileHash -LiteralPath $bep6Dll).Hash
-    bepInEx5Files = $expectedBep5Files
-    bepInEx6Files = $expectedBep6Files
+    assemblyVersion = $assemblyVersion.ToString()
+    bepInEx5References = Get-SortedNames $bep5References
+    bepInEx6References = Get-SortedNames $bep6References
+    files = $expectedFiles
     internalSourceFiles = Get-SortedNames $sourceFiles
     internalSourceStageRemoved = $true
     personalPathMarkersChecked = @($markers).Count
     personalPathScanClean = $true
+    loaderDiscoveryExactlyOnePerTarget = $true
+    bepInEx5SimulatedCachedUpgradePassed = $true
     freshSourceRebuildIdentical = $true
     gameInstallationChanged = $false
     liveGameplayTest = $false
 }
 $record | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $checkRoot 'validation.json') -Encoding utf8
 Write-Output "Personal path scan clean ($(@($markers).Count) markers)."
-Write-Output "Candidate packages validated: $bep5Zip and $bep6Zip"
-Write-Output "BepInEx 5 ZIP SHA256: $($record.bepInEx5ZipSha256)"
-Write-Output "BepInEx 6 ZIP SHA256: $($record.bepInEx6ZipSha256)"
+Write-Output "Universal candidate package validated: $universalZip"
+Write-Output "Universal ZIP SHA256: $($record.universalZipSha256)"
 Write-Output "BepInEx 5 DLL SHA256: $($record.bepInEx5DllSha256)"
 Write-Output "BepInEx 6 DLL SHA256: $($record.bepInEx6DllSha256)"
 Write-Output "Validation record: $(Join-Path $checkRoot 'validation.json')"

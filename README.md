@@ -7,7 +7,7 @@ Tired of police having pocket vision, sensing when you have stolen goods? Put a 
 ### Manual installation
 
 1. Install either [BepInEx 5](https://github.com/BepInEx/BepInEx/releases/latest) or [BepInEx 6](https://builds.bepinex.dev/projects/bepinex_be) in your Obenseuer game folder.
-2. Download the Probable Cause ZIP that matches your installed BepInEx version, then extract it into the Obenseuer game folder.
+2. Download Probable Cause, then extract the ZIP into the Obenseuer game folder. The same ZIP supports both BepInEx versions.
 3. Launch Obenseuer normally.
 
 ## How it works
@@ -18,7 +18,7 @@ Witnesses still report crimes they see, and scripted checks in specific places w
 
 ## Compatibility
 
-Probable Cause has separate Windows x64 builds for BepInEx 5 and BepInEx 6, make sure to install the correct version. There are currently no known incompatibilities. If a game update changes the police code this mod relies on, the mod switches itself off and police use the base game's rules.
+Probable Cause supports BepInEx 5 and BepInEx 6 on Windows x64 in one download. There are currently no known incompatibilities. If a game update changes the police code this mod relies on, the mod switches itself off and police use the base game's rules.
 
 ## AI Use
 

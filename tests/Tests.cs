@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
 using HarmonyLib;
+using Mono.Cecil;
 using NPC;
 using ProbableCause;
 
@@ -12,12 +14,13 @@ internal static class Tests
     private static int passed;
     private static readonly List<float> counted = new List<float>();
 
-    internal static int Run()
+    internal static int Run(string pluginPath)
     {
         Console.WriteLine("BepInEx: " + typeof(BepInEx.BepInPlugin).Assembly.FullName);
         Console.WriteLine("Harmony: " + typeof(Harmony).Assembly.FullName);
         Console.WriteLine("Game: " + typeof(Crime).Assembly.Location);
         LoaderTests();
+        if (pluginPath != null) PackagedLoaderDiscoveryTests(pluginPath);
         ResolutionTests();
         PatchedBehaviorTests();
         Console.WriteLine($"PASS: {passed} checks. Real game methods patched and run on desktop .NET Framework with synthetic objects. " +
@@ -49,9 +52,117 @@ internal static class Tests
             True(typeof(Plugin).BaseType == typeof(BepInEx.BaseUnityPlugin));
 #endif
             True(Plugin.Guid == "com.skeptic043.obenseuer.probablecause");
-            True(Plugin.Version == "1.0.1");
-            True(pluginAssembly.GetName().Version == new Version(1, 0, 1, 0));
+            True(Plugin.Version == "1.0.2");
+            True(pluginAssembly.GetName().Version == new Version(1, 0, 2, 0));
         });
+    }
+
+    private static void PackagedLoaderDiscoveryTests(string pluginPath)
+    {
+        string loaderState = Path.Combine(Path.GetTempPath(), "ProbableCause-LoaderState-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(loaderState);
+        SetBepInExPath("ConfigPath", loaderState);
+        SetBepInExPath("BepInExConfigPath", Path.Combine(loaderState, "BepInEx.cfg"));
+        SetBepInExPath("CachePath", loaderState);
+        try
+        {
+            Check("loader discovery selects exactly its packaged build", () =>
+            {
+                string selected = ExpectedPackagedDll(pluginPath);
+                string ignored = IgnoredPackagedDll(pluginPath);
+                True(File.Exists(selected));
+                True(File.Exists(ignored));
+                var found = Discover(pluginPath, null);
+                True(found.Count == 1);
+                True(string.Equals(Path.GetFullPath(found.Single()), Path.GetFullPath(selected), StringComparison.OrdinalIgnoreCase));
+            });
+#if !BEPINEX6
+            Check("BepInEx 5 simulated cached upgrade follows the universal package", () =>
+            {
+                string root = Path.Combine(Path.GetTempPath(), "ProbableCause-LoaderCache-" + Guid.NewGuid().ToString("N"));
+                string plugins = Path.Combine(root, "plugins");
+                string cache = Path.Combine(root, "cache");
+                Directory.CreateDirectory(plugins);
+                Directory.CreateDirectory(cache);
+                try
+                {
+                    string legacyMain = Path.Combine(plugins, "ProbableCause.dll");
+                    string universalMain = Path.Combine(pluginPath, "ProbableCause.dll");
+                    string universalBep5 = Path.Combine(pluginPath, "ProbableCause.BepInEx5.dll");
+                    File.Copy(universalBep5, legacyMain);
+                    File.SetLastWriteTimeUtc(legacyMain, File.GetLastWriteTimeUtc(universalMain).AddDays(-1));
+                    SetBepInExPath("CachePath", cache);
+                    var before = Discover(plugins, "probable-cause-upgrade");
+                    True(before.Count == 1 && string.Equals(Path.GetFullPath(before.Single()), Path.GetFullPath(legacyMain), StringComparison.OrdinalIgnoreCase));
+
+                    File.Copy(universalMain, legacyMain, true);
+                    File.SetLastWriteTimeUtc(legacyMain, File.GetLastWriteTimeUtc(universalMain));
+                    File.Copy(universalBep5, Path.Combine(plugins, "ProbableCause.BepInEx5.dll"));
+                    var after = Discover(plugins, "probable-cause-upgrade");
+                    True(after.Count == 1);
+                    True(string.Equals(Path.GetFileName(after.Single()), "ProbableCause.BepInEx5.dll", StringComparison.OrdinalIgnoreCase));
+                }
+                finally { Directory.Delete(root, true); }
+            });
+#endif
+        }
+        finally { Directory.Delete(loaderState, true); }
+    }
+
+    private static List<string> Discover(string pluginPath, string cacheName)
+    {
+#if BEPINEX6
+        const string loaderReference = "BepInEx.Core";
+#else
+        const string loaderReference = "BepInEx";
+#endif
+        var discovered = BepInEx.Bootstrap.TypeLoader.FindPluginTypes<DiscoveredPlugin>(
+            pluginPath,
+#if BEPINEX6
+            (type, _) => SelectPlugin(type),
+#else
+            type => SelectPlugin(type),
+#endif
+            assembly => assembly.MainModule.AssemblyReferences.Any(reference => reference.Name == loaderReference),
+            cacheName);
+        return discovered.Where(pair => pair.Value.Count != 0).Select(pair => pair.Key).ToList();
+    }
+
+    private static DiscoveredPlugin SelectPlugin(TypeDefinition type) =>
+        type.CustomAttributes.Any(attribute => attribute.AttributeType.FullName == "BepInEx.BepInPlugin")
+            ? new DiscoveredPlugin { TypeName = type.FullName }
+            : null;
+
+    private static string ExpectedPackagedDll(string pluginPath)
+    {
+#if BEPINEX6
+        return Path.Combine(pluginPath, "ProbableCause.dll");
+#else
+        return Path.Combine(pluginPath, "ProbableCause.BepInEx5.dll");
+#endif
+    }
+
+    private static string IgnoredPackagedDll(string pluginPath)
+    {
+#if BEPINEX6
+        return Path.Combine(pluginPath, "ProbableCause.BepInEx5.dll");
+#else
+        return Path.Combine(pluginPath, "ProbableCause.dll");
+#endif
+    }
+
+    private static void SetBepInExPath(string name, string value)
+    {
+        var property = typeof(BepInEx.Paths).GetProperty(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+        True(property != null);
+        property.SetValue(null, value, null);
+    }
+
+    private sealed class DiscoveredPlugin : BepInEx.Bootstrap.ICacheable
+    {
+        public string TypeName { get; set; }
+        public void Save(BinaryWriter writer) => writer.Write(TypeName);
+        public void Load(BinaryReader reader) => TypeName = reader.ReadString();
     }
 
     private static void ResolutionTests()

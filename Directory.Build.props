@@ -33,6 +33,9 @@
     <Reference Include="BepInEx.Unity.Mono"><HintPath>$(BepInExCorePath)\BepInEx.Unity.Mono.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="0Harmony"><HintPath>$(BepInExCorePath)\0Harmony.dll</HintPath><Private>false</Private></Reference>
   </ItemGroup>
+  <ItemGroup Condition="'$(MSBuildProjectName)' == 'ProbableCause.Tests'">
+    <Reference Include="Mono.Cecil"><HintPath>$(BepInExCorePath)\Mono.Cecil.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
   <ItemGroup>
     <Reference Include="Assembly-CSharp"><HintPath>$(GameManagedPath)\Assembly-CSharp.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine"><HintPath>$(GameManagedPath)\UnityEngine.dll</HintPath><Private>false</Private></Reference>

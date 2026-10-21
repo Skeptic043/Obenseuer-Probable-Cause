@@ -9,11 +9,11 @@ internal static class Program
 
     private static int Main(string[] args)
     {
-        if (args.Length != 2) { Console.Error.WriteLine("Supply GamePath and BepInExCorePath."); return 2; }
+        if (args.Length < 2 || args.Length > 3) { Console.Error.WriteLine("Supply GamePath, BepInExCorePath, and optionally PluginPath."); return 2; }
         gameManaged = Path.Combine(args[0], "Obenseuer_Data", "Managed");
         bepinexCore = args[1];
         AppDomain.CurrentDomain.AssemblyResolve += Resolve;
-        try { return Tests.Run(); }
+        try { return Tests.Run(args.Length == 3 ? args[2] : null); }
         catch (Exception error) { Console.Error.WriteLine(error); return 1; }
     }
 
