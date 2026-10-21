@@ -6,7 +6,7 @@ Tired of police having pocket vision, sensing when you have stolen goods? Put a 
 
 ### Manual installation
 
-1. Install either [BepInEx 5](https://github.com/BepInEx/BepInEx/releases/latest) or [BepInEx 6](https://builds.bepinex.dev/projects/bepinex_be) in your Obenseuer game folder.
+1. Install either [BepInEx 5.4.23.5](https://github.com/BepInEx/BepInEx/releases/tag/v5.4.23.5) or [BepInEx 6.0.0-be.755 Unity Mono](https://builds.bepinex.dev/projects/bepinex_be/755/BepInEx-Unity.Mono-win-x64-6.0.0-be.755%2B3fab71a.zip) in your Obenseuer game folder.
 2. Download Probable Cause, then extract the ZIP into the Obenseuer game folder. The same ZIP supports both BepInEx versions.
 3. Launch Obenseuer normally.
 
@@ -18,7 +18,7 @@ Witnesses still report crimes they see, and scripted checks in specific places w
 
 ## Compatibility
 
-Probable Cause supports BepInEx 5 and BepInEx 6 on Windows x64 in one download. There are currently no known incompatibilities. If a game update changes the police code this mod relies on, the mod switches itself off and police use the base game's rules.
+Probable Cause supports BepInEx 5.4.23.5 and BepInEx 6.0.0-be.755 Unity Mono on Windows x64 in one download. The version 1.0.2 two-DLL layout was tested under both loaders, and each loader initialized its matching DLL once alongside Interaction Range. If a game update changes the police code this mod relies on, the mod switches itself off and police use the base game's rules.
 
 ## AI Use
 

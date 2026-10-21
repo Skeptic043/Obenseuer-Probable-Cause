@@ -4,7 +4,7 @@
 
 - One download now supports both BepInEx 5 and BepInEx 6. Existing installations can be upgraded by extracting the new ZIP over the game folder.
 - Documentation files now stay inside the Probable Cause plugin folder instead of sharing names at the game root.
-- Police behavior is unchanged from version 1.0.1.
+- Verified the universal two-DLL layout starts under BepInEx 5.4.23.5 and BepInEx 6.0.0-be.755 with one Probable Cause instance alongside Interaction Range. Police behavior is unchanged from version 1.0.1.
 
 ## Version 1.0.1
 
